@@ -1,5 +1,5 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 
 /**
  * V2EX解析器类
@@ -903,19 +903,19 @@ class V2exParser {
     }
 }
 
-// 导出类
-module.exports = V2exParser;
-
 // 创建默认实例
 const parser = new V2exParser();
 
+// 导出类
+export default V2exParser;
+
 // 导出便捷函数
-module.exports.parseV2exPage = (url, options) => parser.parseV2exPage(url, options);
-module.exports.parseUserInfo = (username, options) => parser.parseUserInfo(username, options);
-module.exports.parsePost = (postId, options) => parser.parsePost(postId, options);
-module.exports.parseMultiPagePost = (postId, options) => parser.parseMultiPagePost(postId, options);
-module.exports.parseMultiplePages = (urls, options) => parser.parseMultiplePages(urls, options);
-module.exports.parseMultipleUsers = (usernames, options) => parser.parseMultipleUsers(usernames, options);
-module.exports.parseMultipleUsersByUrls = (usernames, options) => parser.parseMultipleUsersByUrls(usernames, options);
-module.exports.setBaseUrl = (baseUrl) => parser.setBaseUrl(baseUrl);
-module.exports.getBaseUrl = () => parser.getBaseUrl();
+export const parseV2exPage = (url, options) => parser.parseV2exPage(url, options);
+export const parseUserInfo = (username, options) => parser.parseUserInfo(username, options);
+export const parsePost = (postId, options) => parser.parsePost(postId, options);
+export const parseMultiPagePost = (postId, options) => parser.parseMultiPagePost(postId, options);
+export const parseMultiplePages = (urls, options) => parser.parseMultiplePages(urls, options);
+export const parseMultipleUsers = (usernames, options) => parser.parseMultipleUsers(usernames, options);
+export const parseMultipleUsersByUrls = (usernames, options) => parser.parseMultipleUsersByUrls(usernames, options);
+export const setBaseUrl = (baseUrl) => parser.setBaseUrl(baseUrl);
+export const getBaseUrl = () => parser.getBaseUrl();
