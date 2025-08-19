@@ -1,6 +1,10 @@
-const V2exParser = require('../index.js');
-const fs = require('fs');
-const path = require('path');
+import V2exParser from '../dist/index.esm.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function testBatchUserParsing() {
     console.log('🚀 开始测试批量用户名解析功能...\n');

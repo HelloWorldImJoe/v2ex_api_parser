@@ -2,14 +2,15 @@
 
 专门用于解析 V2EX 帖子内容的 npm 包，支持提取发帖人信息、ID、标题和回复内容。
 
-## 功能特性
+## 特性
 
-- 解析 V2EX 用户信息页面
-- 解析 V2EX 帖子页面和回复内容
+- 支持解析 V2EX 用户信息页面和帖子页面
+- 自动识别页面类型（用户信息页面或帖子页面）
 - 支持多页帖子抓取
 - 批量用户信息解析
-- 自动重试和错误处理
-- 可配置的请求间隔和超时设置
+- 提取 Solana 地址信息
+- 保持原始换行格式
+- 支持 ES Module 和 CommonJS
 
 ## 安装
 
@@ -17,180 +18,112 @@
 npm install v2ex-api-parser
 ```
 
-## 基本用法
+## 使用方法
+
+### ES Module 语法
+
+```javascript
+import V2exParser from "v2ex-api-parser";
+
+const parser = new V2exParser();
+const userInfo = await parser.parseUserInfo("username");
+const postInfo = await parser.parsePost("123456");
+```
+
+### CommonJS 语法
+
+```javascript
+const V2exParser = require("v2ex-api-parser");
+
+const parser = new V2exParser();
+const userInfo = await parser.parseUserInfo("username");
+const postInfo = await parser.parsePost("123456");
+```
+
+## 主要功能
 
 ### 解析用户信息
 
 ```javascript
-const { parseUserInfo } = require("v2ex-api-parser");
-
-// 解析单个用户
-const userInfo = await parseUserInfo("Livid");
+const userInfo = await parser.parseUserInfo("username");
 console.log(userInfo);
+// 输出: {
+//   type: 'user_info',
+//   username: 'username',
+//   userId: 'username',
+//   memberId: '12345',
+//   avatar: 'https://...',
+//   signature: '个人签名',
+//   joinTime: '2023-01-01',
+//   activeRank: '123',
+//   isPro: false,
+//   socialLinks: {...},
+//   solanaAddress: '...',
+//   recentReplies: [...]
+// }
 ```
 
 ### 解析帖子内容
 
 ```javascript
-const { parsePost } = require("v2ex-api-parser");
-
-// 解析帖子（默认使用多页抓取）
-const postInfo = await parsePost("1153351");
-
-// 或者禁用多页抓取，只抓取第一页
-const postInfoSinglePage = await parsePost("1153351", {
-  useMultiPage: false,
-});
-
+const postInfo = await parser.parsePost("123456");
 console.log(postInfo);
+// 输出: {
+//   type: 'post',
+//   postId: '123456',
+//   title: '帖子标题',
+//   author: {...},
+//   content: '帖子内容',
+//   replies: [...],
+//   statistics: {...}
+// }
 ```
 
-### 多页帖子解析
+### 多页帖子抓取
 
 ```javascript
-const { parseMultiPagePost } = require("v2ex-api-parser");
-
-// 解析多页帖子
-const multiPageInfo = await parseMultiPagePost("1153351", {
-  showProgress: true,
-  timeout: 10000,
-});
-console.log(multiPageInfo);
+const postInfo = await parser.parsePost("123456", { useMultiPage: true });
+console.log(`总页数: ${postInfo.statistics.totalPages}`);
+console.log(`总回复数: ${postInfo.statistics.replyCount}`);
 ```
 
 ### 批量用户解析
 
 ```javascript
-const { parseMultipleUsers } = require("v2ex-api-parser");
-
-// 批量解析用户
-const users = await parseMultipleUsers(["Livid", "acros", "Kai"], {
-  showProgress: true,
+const usernames = ["user1", "user2", "user3"];
+const results = await parser.parseMultipleUsers(usernames, {
+  timeout: 15000,
   delay: 1000,
   retryCount: 2,
+  showProgress: true,
 });
-console.log(users);
 ```
 
-## 高级用法
-
-### 自定义配置
+### 设置基础 URL
 
 ```javascript
-const V2exParser = require("v2ex-api-parser");
-
-const parser = new V2exParser({
-  baseUrl: "https://global.v2ex.co",
-  timeout: 15000,
-});
-
-// 设置基础URL
 parser.setBaseUrl("https://global.v2ex.co");
-
-// 解析页面
-const result = await parser.parseV2exPage(
-  "https://global.v2ex.co/member/Livid"
-);
 ```
 
-### 解析选项
+## 模块格式说明
 
-```javascript
-const options = {
-  showProgress: true, // 显示进度
-  delay: 1000, // 请求间隔(毫秒)
-  retryCount: 2, // 重试次数
-  timeout: 10000, // 超时时间
-  useMultiPage: true, // 是否使用多页抓取(parsePost方法)
-};
-```
+- **CommonJS**: `dist/index.js` - 适用于 Node.js 环境
+- **ES Module**: `dist/index.esm.js` - 适用于现代打包工具和 ES 模块环境
 
-## 返回数据格式
-
-### 用户信息
-
-```javascript
-{
-  username: "Livid",
-  memberId: "1",
-  joinTime: "2010-04-25 21:45:46",
-  activeRank: "226",
-  signature: "Remember the bigger green...",
-  solanaAddress: "4DmZnXBzRzZpHmRhDSyGzZrMStPkw7DzpzwuC9X2w6AR",
-  recentReplies: 8,
-}
-```
-
-### 帖子信息
-
-```javascript
-{
-  type: "post",
-  url: "https://v2ex.com/t/1153351",
-  postId: "1153351",
-  title: "帖子标题",
-  author: {
-    name: "作者名",
-    id: "作者ID",
-    avatar: "头像URL"
-  },
-  postTime: "发布时间",
-  clickCount: "点击次数",
-  content: "帖子内容",
-  tags: ["标签1", "标签2"],
-  replyUserIds: ["回复者ID1", "回复者ID2"],
-  replies: [
-    {
-      id: "回复ID",
-      floor: "楼层号",
-      author: {
-        name: "回复者名",
-        id: "回复者ID",
-        avatar: "头像URL"
-      },
-      content: "回复内容",
-      time: "回复时间",
-      device: "设备信息",
-      solanaAddresses: ["Solana地址1", "Solana地址2"]
-    }
-  ],
-  statistics: {
-    replyCount: 16,
-    totalFloors: 17
-  },
-  pagination: {
-    hasMultiplePages: false,
-    totalPages: 1,
-    currentPage: 1
-  },
-  parsedAt: "2024-01-01T00:00:00.000Z"
-}
-```
-
-## 测试
+## 开发
 
 ```bash
-# 运行所有测试
+# 安装依赖
+npm install
+
+# 构建
+npm run build
+
+# 开发模式构建（监听文件变化）
+npm run build:dev
+
+# 运行测试
 npm run test:all
-
-# 运行主要测试
-npm test
-
-# 运行批量用户测试
-npm run test:batch
-```
-
-## 发布
-
-```bash
-# 发布补丁版本
-npm run publish:patch
-
-# 发布次要版本
-npm run publish:minor
-
-# 发布主要版本
-npm run publish:major
 ```
 
 ## 许可证
