@@ -1,6 +1,6 @@
 {
   "name": "v2ex-api-parser",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "专门用于解析V2EX帖子内容的npm包，支持提取发帖人信息、ID、标题和回复内容",
   "main": "index.js",
   "scripts": {
