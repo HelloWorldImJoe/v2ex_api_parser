@@ -1,0 +1,36 @@
+{
+  "name": "v2ex-api-parser",
+  "version": "0.0.1",
+  "description": "专门用于解析V2EX帖子内容的npm包，支持提取发帖人信息、ID、标题和回复内容",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test/test-parser.js",
+    "test:batch": "node test/test-batch-users.js",
+    "test:all": "npm run test && npm run test:batch",
+    "prepublishOnly": "npm run test:all",
+    "prepack": "npm run test:all",
+    "publish:patch": "npm version patch && npm publish",
+    "publish:minor": "npm version minor && npm publish",
+    "publish:major": "npm version major && npm publish",
+    "publish:beta": "npm version prerelease --preid=beta && npm publish --tag beta",
+    "publish:rc": "npm version prerelease --preid=rc && npm publish --tag rc"
+  },
+  "keywords": [
+    "v2ex",
+    "parser"
+  ],
+  "author": "GrabCoffee(Joe)",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GrabCoffee/v2ex_api_parser.git"
+  },
+  "bugs": {
+    "url": "https://github.com/grabcoffee/v2ex-api-parser/issues"
+  },
+  "homepage": "https://github.com/grabcoffee/v2ex-api-parser#readme"
+}
