@@ -494,25 +494,22 @@ class V2exParser {
 
         // 方法1: 从script标签中提取
         const scriptContent = $('script').text();
-        const addressMatch = scriptContent.match(/const address = "([A-Za-z0-9]{32-44})"/);
+        const addressMatch = scriptContent.match(/const address = "([A-Za-z0-9]{32,44})"/);
         if (addressMatch) {
             result.solanaAddress = addressMatch[1];
         }
 
-        // 方法2: 从页面文本中查找Solana地址格式
+        // 方法2: 使用更稳健的文本提取（带边界与URL过滤）
         const pageText = $.text();
-        const solanaAddressRegex = /[1-9A-HJ-NP-Za-km-z]{32,44}/g;
-        const addresses = pageText.match(solanaAddressRegex);
-        if (addresses && addresses.length > 0) {
-            // 过滤掉可能的其他Base58编码字符串
-            const validAddress = addresses.find(addr => addr.length >= 32 && addr.length <= 44);
-            if (validAddress) {
-                result.solanaAddress = validAddress;
-            }
+        const sanitizedText = this.removeUrlTransactionSignatures(pageText);
+        const extracted = this.extractSolanaAddressesWithBoundary(sanitizedText);
+        if (extracted && extracted.length > 0) {
+            result.solanaAddress = result.solanaAddress || extracted[0];
         }
 
         // 提取sol域名
-        result.solanaDomain = this.extractSolanaDomain(pageText);
+        const domains = this.extractSolanaDomainsFromText(pageText);
+        result.solanaDomain = domains && domains.length > 0 ? domains[0] : null;
 
         return result;
     }
@@ -524,26 +521,27 @@ class V2exParser {
      */
     extractSolanaDomain(text) {
         if (!text) return null;
+        const domains = this.extractSolanaDomainsFromText(text);
+        return domains && domains.length > 0 ? domains[0] : null;
+    }
 
-        // 匹配.sol域名的正则表达式
-        // 确保域名前后没有字符（空白字符除外）
-        const domainRegex = /(?<!\S)\.sol(?=\s|$)/g;
-        const matches = text.match(domainRegex);
-
-        if (matches && matches.length > 0) {
-            // 返回第一个匹配的域名
-            return matches[0];
+    /**
+     * 从文本中移除交易签名类URL，避免将签名误识别为地址
+     * 例如: solscan.io/tx/<signature>、explorer.solana.com/tx/<signature>
+     * @param {string} text
+     * @returns {string}
+     */
+    removeUrlTransactionSignatures(text) {
+        if (!text) return '';
+        const patterns = [
+            /https?:\/\/[^\s]*\/(tx|transaction|confirmTransaction)\/[^\s]*/gi,
+            /https?:\/\/[^\s]*\/txs\/[^\s]*/gi
+        ];
+        let sanitized = text;
+        for (const p of patterns) {
+            sanitized = sanitized.replace(p, ' ');
         }
-
-        // 如果没有找到.sol，尝试查找其他可能的域名格式
-        const generalDomainRegex = /(?<!\S)([a-zA-Z0-9-]+\.sol)(?=\s|$)/g;
-        const generalMatches = text.match(generalDomainRegex);
-
-        if (generalMatches && generalMatches.length > 0) {
-            return generalMatches[0];
-        }
-
-        return null;
+        return sanitized;
     }
 
     /**
@@ -645,7 +643,7 @@ class V2exParser {
 
         // 匹配.sol域名的正则表达式
         // 确保域名前后没有字符（空白字符除外）
-        const domainRegex = /(?<!\S)([a-zA-Z0-9-]+\.sol)(?=\s|$)/g;
+        const domainRegex = /(?<!\S)([a-zA-Z0-9_-]+\.sol)(?=\s|$)/g;
         const matches = text.match(domainRegex);
 
         if (matches && matches.length > 0) {
@@ -657,9 +655,9 @@ class V2exParser {
                 // 确保以.sol结尾
                 if (!domain.endsWith('.sol')) return false;
 
-                // 确保域名部分只包含字母、数字和连字符
+                // 确保域名部分只包含字母、数字、下划线和连字符
                 const domainPart = domain.replace('.sol', '');
-                if (!/^[a-zA-Z0-9-]+$/.test(domainPart)) return false;
+                if (!/^[a-zA-Z0-9_-]+$/.test(domainPart)) return false;
 
                 return true;
             });
@@ -687,20 +685,21 @@ class V2exParser {
 
         const addresses = [];
 
-        // 使用更精确的正则表达式，确保地址前后有边界
-        // 边界可以是：行首、行尾、空格、标点符号等
-        const addressRegex = /(?<!\S)([1-9A-HJ-NP-Za-km-z]{32,44})(?=\s|$|[^\w])/g;
+        // 使用更稳健的正则表达式，允许中文标点/文字作为边界
+        // 左边界：行首或非Base58字符；右边界：非Base58字符或行尾
+        const addressRegex = /(?:^|[^1-9A-HJ-NP-Za-km-z])([1-9A-HJ-NP-Za-km-z]{32,44})(?![1-9A-HJ-NP-Za-km-z])/g;
 
         let match;
         while ((match = addressRegex.exec(text)) !== null) {
             const address = match[1];
 
-            // 验证地址的有效性
-            if (this.isValidSolanaAddress(address)) {
-                // 进一步检查：确保不是URL的一部分
-                if (!this.isPartOfUrl(text, match.index, address.length)) {
-                    addresses.push(address);
-                }
+            // 计算地址在原文本中的真实起始位置（排除左边界占位字符）
+            const precedingOffset = match[0].length - match[1].length;
+            const addressStartIndex = match.index + precedingOffset;
+
+            // 验证地址的有效性并确保不是URL的一部分
+            if (this.isValidSolanaAddress(address) && !this.isPartOfUrl(text, addressStartIndex, address.length)) {
+                addresses.push(address);
             }
         }
 
@@ -723,8 +722,8 @@ class V2exParser {
      */
     isPartOfUrl(text, startIndex, addressLength) {
         // 检查地址前后是否有URL特征
-        const beforeText = text.substring(Math.max(0, startIndex - 20), startIndex);
-        const afterText = text.substring(startIndex + addressLength, Math.min(text.length, startIndex + addressLength + 20));
+        const beforeText = text.substring(Math.max(0, startIndex - 200), startIndex);
+        const afterText = text.substring(startIndex + addressLength, Math.min(text.length, startIndex + addressLength + 200));
 
         // URL特征：包含http、https、www、.com、.io等
         const urlPatterns = [
@@ -736,6 +735,12 @@ class V2exParser {
         ];
 
         const combinedText = beforeText + afterText;
+
+        // 直接邻近检查，避免窗口截断导致漏判
+        const immediateBefore = text.substring(Math.max(0, startIndex - 4), startIndex);
+        if (immediateBefore === '/tx/' || immediateBefore === 'tx/' || immediateBefore === '/address/' || immediateBefore === 'address/') {
+            return true;
+        }
 
         return urlPatterns.some(pattern => pattern.test(combinedText));
     }
