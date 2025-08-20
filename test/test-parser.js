@@ -18,12 +18,12 @@ async function testParser() {
 
     try {
         // 测试: 尝试多页抓取（如果网络允许）
-        console.log('📋 测试: 尝试多页抓取 (123456)');
+        console.log('📋 测试: 尝试多页抓取 (1153153)');
         console.log('='.repeat(50));
 
         try {
             parser.setBaseUrl('https://global.v2ex.co');
-            const multiPageInfo = await parser.parsePost('123456', { ...options, useMultiPage: true });
+            const multiPageInfo = await parser.parsePost('1153153', { ...options, useMultiPage: true });
             console.log('✅ 多页抓取成功');
 
             // 保存多页结果到JSON文件

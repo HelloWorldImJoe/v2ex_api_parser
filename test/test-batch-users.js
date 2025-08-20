@@ -57,6 +57,7 @@ async function testBatchUserParsing() {
                 console.log(`      - 活跃排名: ${userData.activeRank || 'N/A'}`);
                 console.log(`      - 个人签名: ${userData.signature ? userData.signature.substring(0, 50) + '...' : 'N/A'}`);
                 console.log(`      - Solana地址: ${userData.solanaAddress || 'N/A'}`);
+                console.log(`      - Solana域名: ${userData.solanaDomain || 'N/A'}`);
                 console.log(`      - 最近回复数: ${userData.recentReplies ? userData.recentReplies.length : 0}`);
                 console.log('');
             });
